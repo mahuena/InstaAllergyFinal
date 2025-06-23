@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { Loader2, Sparkles, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,13 +93,29 @@ export default function RecommendationsPage() {
             </CardHeader>
             <CardContent>
               {recommendations.safeFoods.length > 0 ? (
-                <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recommendations.safeFoods.map((food) => (
-                    <li key={food} className="bg-muted p-4 rounded-lg font-semibold text-center">
-                      {food}
-                    </li>
-                  ))}
-                </ul>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recommendations.safeFoods.map((foodName) => {
+                    const food = FOOD_DATABASE.find(f => f.name === foodName);
+                    if (!food) return null;
+                    return (
+                      <Card key={food.name} className="overflow-hidden group">
+                        <div className="relative h-48 w-full">
+                          <Image
+                            src={food.image}
+                            alt={food.name}
+                            layout="fill"
+                            objectFit="cover"
+                            data-ai-hint={food.dataAiHint}
+                            className="transition-transform duration-300 group-hover:scale-105"
+                          />
+                        </div>
+                        <CardHeader>
+                          <CardTitle>{food.name}</CardTitle>
+                        </CardHeader>
+                      </Card>
+                    );
+                  })}
+                </div>
               ) : (
                 <p>No specific recommendations found based on your current profile.</p>
               )}

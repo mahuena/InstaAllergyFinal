@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Camera, AlertTriangle, Info, Loader2, Shield, Sparkles, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import { classifyFood, ClassifyFoodOutput } from "@/ai/flows/classify-food";
 import { detectAllergensAndGenerateAlert, DetectAllergensOutput } from "@/ai/flows/detect-allergens";
@@ -109,14 +110,21 @@ export function FoodScanner() {
     }
   };
   
-  const getAlertVariant = (alertLevel?: 'HIGH' | 'MODERATE' | 'SAFE') => {
+  const getAlertBadgeProps = (alertLevel?: 'HIGH' | 'MODERATE' | 'SAFE') => {
     switch(alertLevel) {
-        case 'HIGH': return 'destructive';
-        case 'MODERATE': return 'default'; // yellow-ish in our theme
-        case 'SAFE': return 'default'; // using default for safe, will style with bg
-        default: return 'default';
+        case 'HIGH': 
+            return { variant: 'destructive' as const, className: '', children: 'HIGH RISK' };
+        case 'MODERATE': 
+            return { variant: 'secondary' as const, className: 'border-yellow-500/50', children: 'MODERATE RISK' };
+        case 'SAFE': 
+            return { variant: 'default' as const, className: 'bg-chart-2 text-accent-foreground hover:bg-chart-2/90', children: 'SAFE' };
+        default: 
+            return { variant: 'outline' as const, className: '', children: 'UNKNOWN' };
     }
   }
+  
+  const badgeProps = allergenResult ? getAlertBadgeProps(allergenResult.alert) : getAlertBadgeProps();
+
 
   return (
     <Card className="w-full">
@@ -134,7 +142,7 @@ export function FoodScanner() {
                 <FormItem>
                   <FormControl>
                     <div
-                      className="relative flex justify-center items-center w-full h-64 border-2 border-dashed border-muted-foreground/50 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                      className="relative group flex justify-center items-center w-full h-64 border-2 border-dashed border-input rounded-lg cursor-pointer bg-card hover:border-primary transition-colors"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <input
@@ -161,9 +169,10 @@ export function FoodScanner() {
                            </Button>
                         </>
                       ) : (
-                        <div className="text-center text-muted-foreground">
+                        <div className="text-center text-muted-foreground group-hover:text-primary transition-colors">
                           <Camera className="mx-auto h-12 w-12 mb-2" />
-                          <p>Click to upload or drag & drop</p>
+                          <p className="font-semibold">Click to upload image</p>
+                          <p className="text-sm">or drag and drop</p>
                         </div>
                       )}
                     </div>
@@ -190,28 +199,43 @@ export function FoodScanner() {
             {classificationResult && (
               <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle className="text-2xl">{classificationResult.classification}</CardTitle>
-                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>Confidence</span>
-                                <Progress value={classificationResult.confidence * 100} className="w-24" />
-                                <span>{Math.round(classificationResult.confidence * 100)}%</span>
-                            </div>
-                        </div>
-                        {allergenResult && (
-                             <Badge 
-                                variant={getAlertVariant(allergenResult.alert)} 
-                                className={`text-base px-4 py-1 ${allergenResult.alert === 'SAFE' ? 'bg-green-100 text-green-800 border-green-200' : ''}`}
-                            >
-                                {allergenResult.alert} RISK
-                             </Badge>
+                    <div className="flex items-start gap-4">
+                        {classificationResult.foodDetails?.image && (
+                          <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
+                            <Image 
+                              src={classificationResult.foodDetails.image} 
+                              alt={classificationResult.foodDetails.name} 
+                              layout="fill" 
+                              objectFit="cover"
+                              data-ai-hint={classificationResult.foodDetails.dataAiHint}
+                            />
+                          </div>
                         )}
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                              <div>
+                                  <CardTitle className="text-2xl">{classificationResult.classification}</CardTitle>
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                                      <span>Confidence</span>
+                                      <Progress value={classificationResult.confidence * 100} className="w-24" />
+                                      <span>{Math.round(classificationResult.confidence * 100)}%</span>
+                                  </div>
+                              </div>
+                              {allergenResult && (
+                                  <Badge 
+                                    variant={badgeProps.variant}
+                                    className={cn("text-base px-4 py-1 flex-shrink-0", badgeProps.className)}
+                                  >
+                                    {badgeProps.children}
+                                  </Badge>
+                              )}
+                          </div>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {allergenResult && (
-                    <Alert variant={getAlertVariant(allergenResult.alert)}>
+                    <Alert variant={badgeProps.variant === 'destructive' ? 'destructive' : 'default'}>
                       <Shield className="h-4 w-4" />
                       <AlertTitle>{allergenResult.allergenDetected ? `Potential Allergen(s) Found!` : 'Looking Good!'}</AlertTitle>
                       <AlertDescription>
