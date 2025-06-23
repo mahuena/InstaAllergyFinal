@@ -1,1 +1,6 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/classify-food.ts';
+import '@/ai/flows/detect-allergens.ts';
+import '@/ai/flows/recommend-safe-foods.ts';
