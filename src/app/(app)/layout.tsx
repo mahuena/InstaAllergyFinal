@@ -13,7 +13,7 @@ import { Icons } from "@/components/icons";
 import { MainNav } from "@/components/main-nav";
 import { useUser } from "@/hooks/use-user";
 import { useRouter } from "next/navigation";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useUser();
@@ -66,6 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="left" className="flex flex-col p-0">
+                        <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                         {sidebarContent}
                     </SheetContent>
                 </Sheet>
