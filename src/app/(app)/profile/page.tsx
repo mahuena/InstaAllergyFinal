@@ -78,7 +78,7 @@ export default function ProfilePage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">My Allergy Profile</h1>
         <p className="text-muted-foreground">
-          Manage your allergies to get accurate food safety alerts.
+          Manage your allergies here. The app will check for these items when you scan food labels or analyze a dish.
         </p>
       </div>
 
@@ -87,7 +87,7 @@ export default function ProfilePage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Common Allergens</CardTitle>
-                    <CardDescription>Select any allergies that apply to you from this common list.</CardDescription>
+                    <CardDescription>Select from this common list. The app will use your selections to warn you about potential risks.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <FormField
@@ -137,7 +137,7 @@ export default function ProfilePage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Custom Allergens</CardTitle>
-                    <CardDescription>Add any other allergies not listed above.</CardDescription>
+                    <CardDescription>Add any other specific ingredients or substances you need to avoid.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                    {fields.map((field, index) => (
