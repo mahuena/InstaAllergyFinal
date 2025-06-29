@@ -8,14 +8,14 @@ import { LayoutDashboard, User, Sparkles } from "lucide-react";
 
 const links = [
   {
-    href: "/dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-  },
-  {
     href: "/profile",
     label: "My Profile",
     icon: User,
+  },
+  {
+    href: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
   },
   {
     href: "/recommendations",
