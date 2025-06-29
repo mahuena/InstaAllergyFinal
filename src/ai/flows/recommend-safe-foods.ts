@@ -17,19 +17,21 @@ const RecommendSafeFoodsInputSchema = z.object({
     dietaryPreferences: z.string().optional().describe('Dietary preferences of the user (e.g., vegetarian, vegan).'),
   }).describe('The user allergy profile and dietary preferences.'),
   nutritionGoals: z.string().optional().describe('The nutritional goals of the user.'),
-  foodDatabase: z.array(z.object({
-    name: z.string().describe('Name of the food.'),
-    ingredients: z.array(z.string()).describe('List of ingredients in the food.'),
-    nutritionalData: z.string().optional().describe('Nutritional information of the food.'),
-    region: z.string().optional().describe('Region of origin of the food.'),
-  })).describe('A database of food items with their ingredients and nutritional information.'),
+  cuisinePreference: z.string().optional().describe('A preferred cuisine type, e.g., "Italian", "Ghanaian", "any".')
 });
-
 export type RecommendSafeFoodsInput = z.infer<typeof RecommendSafeFoodsInputSchema>;
 
+const RecommendedFoodSchema = z.object({
+  name: z.string().describe("The name of the recommended food/dish."),
+  description: z.string().describe("A brief, appetizing description of the food."),
+  reasoning: z.string().describe("Why this specific food is a good recommendation based on the user's profile."),
+  dataAiHint: z.string().describe("One or two keywords for image search, like 'ghanaian food' or 'caesar salad'.")
+});
+export type RecommendedFood = z.infer<typeof RecommendedFoodSchema>;
+
 const RecommendSafeFoodsOutputSchema = z.object({
-  safeFoods: z.array(z.string()).describe('List of recommended safe foods based on the user profile.'),
-  reasoning: z.string().describe('Explanation of why these foods are recommended.'),
+  recommendations: z.array(RecommendedFoodSchema).describe('List of recommended safe foods with details.'),
+  overallReasoning: z.string().describe("A summary explanation of why these foods are recommended as a group."),
 });
 
 export type RecommendSafeFoodsOutput = z.infer<typeof RecommendSafeFoodsOutputSchema>;
@@ -42,29 +44,21 @@ const prompt = ai.definePrompt({
   name: 'recommendSafeFoodsPrompt',
   input: {schema: RecommendSafeFoodsInputSchema},
   output: {schema: RecommendSafeFoodsOutputSchema},
-  prompt: `You are an AI food recommendation expert. Given a user's allergy profile, dietary preferences, nutrition goals, and a database of foods, you will recommend a list of safe foods for the user and explain your reasoning.
+  prompt: `You are an AI food recommendation expert and creative chef. Your task is to recommend 3-5 delicious and safe dishes based on a user's allergy profile, dietary preferences, and nutrition goals.
 
-User Allergy Profile:
-Allergens: {{allergyProfile.allergens}}
-Dietary Preferences: {{allergyProfile.dietaryPreferences}}
-Nutrition Goals: {{nutritionGoals}}
+User Profile:
+- Allergens to avoid: {{allergyProfile.allergens}}
+- Dietary Preferences: {{allergyProfile.dietaryPreferences}}
+- Nutrition Goals: {{nutritionGoals}}
+- Preferred Cuisine: {{cuisinePreference}}
 
-Food Database:
-{{#each foodDatabase}}
-- Name: {{this.name}}
-  Ingredients: {{this.ingredients}}
-  Nutritional Data: {{this.nutritionalData}}
-  Region: {{this.region}}
-{{/each}}
+Your task:
+1.  Generate a list of 3 creative and appealing food recommendations that are safe for the user.
+2.  For each recommendation, provide a name, a short appetizing description, a reason why it's a good choice for the user, and a 1-2 word AI hint for image generation.
+3.  Crucially, ensure that the *typical* ingredients of your recommended dishes DO NOT contain any of the user's allergens.
+4.  Provide a brief 'overallReasoning' that summarizes your thought process for the recommendations as a whole.
 
-Based on this information, recommend safe foods for the user, and explain your reasoning.
-Consider dietary preferences and nutrition goals when making your recommendation.
-
-Output in the following format:
-{
-  "safeFoods": ["Food1", "Food2"],
-  "reasoning": "Explanation of why these foods are recommended."
-}
+Do not recommend simple ingredients (e.g., "apple"); recommend complete dishes (e.g., "Baked Apple with Cinnamon").
 `,
 });
 

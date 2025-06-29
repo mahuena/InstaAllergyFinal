@@ -17,7 +17,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
-import { getFoodByName, FoodItem } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,7 +28,6 @@ const formSchema = z.object({
   image: z.instanceof(File).optional().refine(file => file === undefined || file.size > 0, "Image is required"),
 });
 
-type ClassificationResult = ClassifyFoodOutput & { foodDetails: FoodItem | null };
 type AllergenResult = DetectAllergensOutput;
 
 export function FoodScanner() {
@@ -37,7 +35,7 @@ export function FoodScanner() {
   const [activeTab, setActiveTab] = useState("analyze-food");
   
   // State for "Analyze Food" tab
-  const [classificationResult, setClassificationResult] = useState<ClassificationResult | null>(null);
+  const [classificationResult, setClassificationResult] = useState<ClassifyFoodOutput | null>(null);
   const [allergenResult, setAllergenResult] = useState<AllergenResult | null>(null);
   const [isClassifyLoading, setIsClassifyLoading] = useState(false);
   const [classifyError, setClassifyError] = useState<string | null>(null);
@@ -175,13 +173,12 @@ export function FoodScanner() {
         
         // 1. Classify Food
         const cfOutput = await classifyFood({ photoDataUri });
-        const foodDetails = getFoodByName(cfOutput.classification);
-        setClassificationResult({ ...cfOutput, foodDetails });
+        setClassificationResult(cfOutput);
 
         // 2. Detect Allergens
-        if (foodDetails) {
+        if (cfOutput.isFood && cfOutput.foodDetails) {
           const daOutput = await detectAllergensAndGenerateAlert({
-            ingredients: foodDetails.ingredients.join(', '),
+            ingredients: cfOutput.foodDetails.ingredients.join(', '),
             allergens: userAllergens,
           });
           setAllergenResult(daOutput);
@@ -392,17 +389,6 @@ export function FoodScanner() {
               <Card>
                 <CardHeader>
                     <div className="flex items-start gap-4">
-                        {classificationResult.foodDetails?.image && (
-                          <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
-                            <Image 
-                              src={classificationResult.foodDetails.image} 
-                              alt={classificationResult.foodDetails.name} 
-                              layout="fill" 
-                              objectFit="cover"
-                              data-ai-hint={classificationResult.foodDetails.dataAiHint}
-                            />
-                          </div>
-                        )}
                         <div className="flex-1">
                           <div className="flex justify-between items-start">
                               <div>
@@ -415,14 +401,17 @@ export function FoodScanner() {
                               </div>
                               {isClassifyLoading && !allergenResult ? (
                                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                              ) : allergenResult && (
+                              ) : allergenResult ? (
                                   <Badge 
                                     variant={classifyBadgeProps.variant}
                                     className={cn("text-base px-4 py-1 flex-shrink-0", classifyBadgeProps.className)}
                                   >
                                     {classifyBadgeProps.children}
                                   </Badge>
-                              )}
+                              ) : !classificationResult.foodDetails && (
+                                <Badge variant="outline">UNKNOWN</Badge>
+                              )
+                              }
                           </div>
                         </div>
                     </div>
@@ -446,7 +435,7 @@ export function FoodScanner() {
                     </Alert>
                   )}
 
-                  {classificationResult.foodDetails ? (
+                  {classificationResult.isFood && classificationResult.foodDetails ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div className="space-y-2">
                             <h4 className="font-semibold">Ingredients</h4>
@@ -468,8 +457,10 @@ export function FoodScanner() {
                   ) : (
                     !isClassifyLoading && <Alert>
                       <Info className="h-4 w-4" />
-                      <AlertTitle>Food Not in Database</AlertTitle>
-                      <AlertDescription>We classified this food, but we don't have detailed ingredient or nutritional data for it in our database.</AlertDescription>
+                      <AlertTitle>Could Not Analyze Food Details</AlertTitle>
+                      <AlertDescription>
+                        {classificationResult.isFood ? "We classified this food, but we couldn't retrieve detailed ingredient or nutritional data for it at this time." : "The uploaded image does not appear to be food."}
+                      </AlertDescription>
                     </Alert>
                   )}
                   
