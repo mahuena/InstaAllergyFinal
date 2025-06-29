@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -21,20 +21,15 @@ const profileFormSchema = z.object({
 });
 
 export default function ProfilePage() {
-  const { user, allergens, updateAllergens, addCustomAllergen } = useUser();
+  const { allergens, updateAllergens } = useUser();
   const { toast } = useToast();
   const [customInput, setCustomInput] = useState("");
-
-  const userCommonAllergens = allergens.filter(a => COMMON_ALLERGENS.includes(a));
-  const userCustomAllergens = allergens
-    .filter(a => !COMMON_ALLERGENS.includes(a))
-    .map(a => ({ value: a }));
 
   const form = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      commonAllergens: userCommonAllergens,
-      customAllergens: userCustomAllergens,
+      commonAllergens: [],
+      customAllergens: [],
     },
   });
   
@@ -43,8 +38,24 @@ export default function ProfilePage() {
     name: "customAllergens"
   });
 
+  useEffect(() => {
+    if (allergens) {
+      form.reset({
+        commonAllergens: allergens.filter(a => COMMON_ALLERGENS.includes(a)),
+        customAllergens: allergens
+          .filter(a => !COMMON_ALLERGENS.includes(a))
+          .map(a => ({ value: a })),
+      });
+    }
+  }, [allergens, form.reset]);
+
   const handleAddCustom = () => {
-    if (customInput && !allergens.includes(customInput)) {
+    const currentValues = form.getValues();
+    const allCurrentAllergens = [
+        ...currentValues.commonAllergens, 
+        ...currentValues.customAllergens.map(a => a.value)
+    ];
+    if (customInput && !allCurrentAllergens.includes(customInput)) {
       append({ value: customInput });
       setCustomInput("");
     }

@@ -56,8 +56,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar className="hidden lg:flex lg:flex-col border-r">
             {sidebarContent}
         </Sidebar>
-        <main className="flex-1 flex flex-col">
-            <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:hidden sticky top-0 z-40">
+        <main className="flex-1 flex flex-col relative" style={{
+            backgroundImage: "url('https://placehold.co/1920x1080.png')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
+        }}>
+            <div data-ai-hint="food ingredients spices" className="hidden"></div>
+            <header className="flex h-14 items-center gap-4 border-b bg-card/90 backdrop-blur-sm px-4 lg:hidden sticky top-0 z-40">
                 <Sheet>
                     <SheetTrigger asChild>
                         <Button variant="outline" size="icon" className="shrink-0">
@@ -75,7 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <h1 className="text-lg font-bold">instaAllergy</h1>
                 </div>
             </header>
-            <div className="flex-1 overflow-y-auto bg-background">
+            <div className="flex-1 overflow-y-auto bg-background/90 backdrop-blur-sm">
               {children}
             </div>
         </main>
