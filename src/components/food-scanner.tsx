@@ -158,6 +158,15 @@ export function FoodScanner() {
   }
   
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    if (!navigator.onLine) {
+      toast({
+        variant: "destructive",
+        title: "You're Offline",
+        description: "An internet connection is required to analyze food.",
+      });
+      return;
+    }
+
     if(!data.image) {
       setClassifyError("Please select an image first.");
       return;
@@ -198,6 +207,15 @@ export function FoodScanner() {
   };
 
   const handleScanLabel = async () => {
+    if (!navigator.onLine) {
+      toast({
+        variant: "destructive",
+        title: "You're Offline",
+        description: "An internet connection is required to scan labels.",
+      });
+      return;
+    }
+
     const imageFile = form.getValues("image");
     if (!imageFile) {
         setOcrError("Please select an image first.");

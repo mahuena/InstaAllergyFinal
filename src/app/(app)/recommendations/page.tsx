@@ -26,6 +26,15 @@ export default function RecommendationsPage() {
   const { user, allergens } = useUser();
 
   const handleGetRecommendations = async () => {
+    if (!navigator.onLine) {
+      toast({
+        variant: "destructive",
+        title: "You're Offline",
+        description: "An internet connection is required to get recommendations.",
+      });
+      return;
+    }
+
     setIsLoading(true);
     setRecommendations(null);
     setOverallReasoning(null);
