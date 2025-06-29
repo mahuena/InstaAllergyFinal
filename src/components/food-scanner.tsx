@@ -5,11 +5,12 @@ import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Camera, AlertTriangle, Info, Loader2, Shield, Sparkles, X, Upload, Video } from "lucide-react";
+import { Camera, AlertTriangle, Info, Loader2, Shield, Sparkles, X, Upload, Video, Scan } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { classifyFood, ClassifyFoodOutput } from "@/ai/flows/classify-food";
 import { detectAllergensAndGenerateAlert, DetectAllergensOutput } from "@/ai/flows/detect-allergens";
+import { extractTextFromImage } from "@/ai/flows/extract-text-from-image";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,9 +22,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "./ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 
 const formSchema = z.object({
-  image: z.instanceof(File, {message: "An image is required."}).refine(file => file.size > 0, "An image is required."),
+  image: z.instanceof(File).optional().refine(file => file === undefined || file.size > 0, "Image is required"),
 });
 
 type ClassificationResult = ClassifyFoodOutput & { foodDetails: FoodItem | null };
@@ -31,10 +34,19 @@ type AllergenResult = DetectAllergensOutput;
 
 export function FoodScanner() {
   const [preview, setPreview] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("analyze-food");
+  
+  // State for "Analyze Food" tab
   const [classificationResult, setClassificationResult] = useState<ClassificationResult | null>(null);
   const [allergenResult, setAllergenResult] = useState<AllergenResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isClassifyLoading, setIsClassifyLoading] = useState(false);
+  const [classifyError, setClassifyError] = useState<string | null>(null);
+
+  // State for "Scan Label" tab
+  const [isOcrLoading, setIsOcrLoading] = useState(false);
+  const [extractedText, setExtractedText] = useState<string | null>(null);
+  const [ocrAllergenResult, setOcrAllergenResult] = useState<AllergenResult | null>(null);
+  const [ocrError, setOcrError] = useState<string | null>(null);
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -141,11 +153,18 @@ export function FoodScanner() {
   const resetResults = () => {
     setClassificationResult(null);
     setAllergenResult(null);
-    setError(null);
+    setClassifyError(null);
+    setExtractedText(null);
+    setOcrAllergenResult(null);
+    setOcrError(null);
   }
-
+  
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    setIsLoading(true);
+    if(!data.image) {
+      setClassifyError("Please select an image first.");
+      return;
+    }
+    setIsClassifyLoading(true);
     resetResults();
 
     try {
@@ -167,17 +186,62 @@ export function FoodScanner() {
           });
           setAllergenResult(daOutput);
         }
-        setIsLoading(false);
+        setIsClassifyLoading(false);
       };
     } catch (e) {
       console.error(e);
-      setError("An error occurred during analysis. Please try again.");
+      setClassifyError("An error occurred during analysis. Please try again.");
       toast({
         title: "Analysis Failed",
         description: "Could not analyze the food item.",
         variant: "destructive",
       });
-      setIsLoading(false);
+      setIsClassifyLoading(false);
+    }
+  };
+
+  const handleScanLabel = async () => {
+    const imageFile = form.getValues("image");
+    if (!imageFile) {
+        setOcrError("Please select an image first.");
+        return;
+    }
+
+    setIsOcrLoading(true);
+    resetResults();
+
+    try {
+        const reader = new FileReader();
+        reader.readAsDataURL(imageFile);
+        reader.onload = async () => {
+            const photoDataUri = reader.result as string;
+
+            // 1. Extract text from image
+            const { extractedText } = await extractTextFromImage({ photoDataUri });
+            setExtractedText(extractedText);
+
+            // 2. Detect allergens in extracted text
+            if (extractedText) {
+                const daOutput = await detectAllergensAndGenerateAlert({
+                    ingredients: extractedText,
+                    allergens: userAllergens,
+                });
+                setOcrAllergenResult(daOutput);
+            }
+            setIsOcrLoading(false);
+        };
+        reader.onerror = () => {
+             throw new Error("Could not read file");
+        }
+    } catch (e) {
+        console.error(e);
+        setOcrError("An error occurred during label analysis. Please try again.");
+        toast({
+            title: "Analysis Failed",
+            description: "Could not analyze the product label.",
+            variant: "destructive",
+        });
+        setIsOcrLoading(false);
     }
   };
   
@@ -194,17 +258,32 @@ export function FoodScanner() {
     }
   }
   
-  const badgeProps = allergenResult ? getAlertBadgeProps(allergenResult.alert) : getAlertBadgeProps();
+  const classifyBadgeProps = allergenResult ? getAlertBadgeProps(allergenResult.alert) : getAlertBadgeProps();
+  const ocrBadgeProps = ocrAllergenResult ? getAlertBadgeProps(ocrAllergenResult.alert) : getAlertBadgeProps();
 
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Food Scanner</CardTitle>
-        <CardDescription>Upload a photo or use your camera to analyze it for allergens.</CardDescription>
+        <CardDescription>Analyze a dish or scan an ingredient label.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-6">
+             <Tabs defaultValue="analyze-food" className="w-full" onValueChange={(value) => {
+                setActiveTab(value);
+                resetResults();
+            }}>
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="analyze-food">
+                        <Sparkles className="mr-2 h-4 w-4" /> Analyze Food
+                    </TabsTrigger>
+                    <TabsTrigger value="scan-label">
+                        <Scan className="mr-2 h-4 w-4" /> Scan Label
+                    </TabsTrigger>
+                </TabsList>
+            </Tabs>
+
             <FormField
               control={form.control}
               name="image"
@@ -221,7 +300,7 @@ export function FoodScanner() {
                             size="icon" 
                             className="absolute top-2 right-2 z-10 h-8 w-8"
                             onClick={(e) => { e.stopPropagation(); resetState(); }}
-                            disabled={isLoading}
+                            disabled={isClassifyLoading || isOcrLoading}
                            >
                             <X className="h-4 w-4" />
                             <span className="sr-only">Clear image</span>
@@ -245,7 +324,7 @@ export function FoodScanner() {
                             <Button type="button" variant="outline" onClick={() => setIsCameraOpen(false)}>
                               Cancel
                             </Button>
-                            <Button type="button" onClick={handleCapture} disabled={isLoading || hasCameraPermission !== true}>
+                            <Button type="button" onClick={handleCapture} disabled={isClassifyLoading || isOcrLoading || hasCameraPermission !== true}>
                                 <Camera className="mr-2 h-4 w-4" />
                                 Capture Photo
                             </Button>
@@ -254,7 +333,7 @@ export function FoodScanner() {
                       ) : (
                         <div
                           className="relative group flex flex-col justify-center items-center w-full h-64 border-2 border-dashed border-input rounded-lg cursor-pointer bg-card hover:border-primary transition-colors"
-                          onClick={() => !isLoading && fileInputRef.current?.click()}
+                          onClick={() => !(isClassifyLoading || isOcrLoading) && fileInputRef.current?.click()}
                         >
                           <input
                             type="file"
@@ -262,7 +341,7 @@ export function FoodScanner() {
                             className="hidden"
                             ref={fileInputRef}
                             onChange={handleFileChange}
-                            disabled={isLoading}
+                            disabled={isClassifyLoading || isOcrLoading}
                           />
                           <div className="text-center text-muted-foreground group-hover:text-primary transition-colors p-4">
                             <Upload className="mx-auto h-12 w-12 mb-2" />
@@ -273,7 +352,7 @@ export function FoodScanner() {
                                 <span className="flex-shrink mx-4 text-muted-foreground/50 text-xs">OR</span>
                                 <div className="flex-grow border-t border-muted-foreground/20"></div>
                             </div>
-                            <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); openCamera(); }} disabled={isLoading}>
+                            <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); openCamera(); }} disabled={isClassifyLoading || isOcrLoading}>
                                 <Video className="mr-2 h-4 w-4" />
                                 Use Camera
                             </Button>
@@ -286,22 +365,30 @@ export function FoodScanner() {
               )}
             />
             
-            {isLoading && !classificationResult &&(
+            {(isClassifyLoading || isOcrLoading) &&(
               <div className="flex items-center justify-center space-x-2">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <p className="text-muted-foreground">Analyzing your food...</p>
+                <p className="text-muted-foreground">{activeTab === 'analyze-food' ? 'Analyzing your food...' : 'Scanning label...'}</p>
               </div>
             )}
             
-            {error && (
+            {classifyError && activeTab === 'analyze-food' && (
                 <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertDescription>{classifyError}</AlertDescription>
                 </Alert>
             )}
 
-            {classificationResult && (
+            {ocrError && activeTab === 'scan-label' && (
+                <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{ocrError}</AlertDescription>
+                </Alert>
+            )}
+
+            {classificationResult && activeTab === 'analyze-food' && (
               <Card>
                 <CardHeader>
                     <div className="flex items-start gap-4">
@@ -326,14 +413,14 @@ export function FoodScanner() {
                                       <span>{Math.round(classificationResult.confidence * 100)}%</span>
                                   </div>
                               </div>
-                              {isLoading ? (
+                              {isClassifyLoading && !allergenResult ? (
                                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
                               ) : allergenResult && (
                                   <Badge 
-                                    variant={badgeProps.variant}
-                                    className={cn("text-base px-4 py-1 flex-shrink-0", badgeProps.className)}
+                                    variant={classifyBadgeProps.variant}
+                                    className={cn("text-base px-4 py-1 flex-shrink-0", classifyBadgeProps.className)}
                                   >
-                                    {badgeProps.children}
+                                    {classifyBadgeProps.children}
                                   </Badge>
                               )}
                           </div>
@@ -341,13 +428,13 @@ export function FoodScanner() {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {(isLoading && !allergenResult) ? (
+                  {(isClassifyLoading && !allergenResult) ? (
                      <div className="flex items-center justify-center space-x-2">
                         <Loader2 className="h-5 w-5 animate-spin text-primary" />
                         <p className="text-muted-foreground">Checking for allergens...</p>
                     </div>
                   ) : allergenResult && (
-                    <Alert variant={badgeProps.variant === 'destructive' ? 'destructive' : 'default'}>
+                    <Alert variant={classifyBadgeProps.variant === 'destructive' ? 'destructive' : 'default'}>
                       <Shield className="h-4 w-4" />
                       <AlertTitle>{allergenResult.allergenDetected ? `Potential Allergen(s) Found!` : 'Looking Good!'}</AlertTitle>
                       <AlertDescription>
@@ -379,7 +466,7 @@ export function FoodScanner() {
                         </div>
                     </div>
                   ) : (
-                    !isLoading && <Alert>
+                    !isClassifyLoading && <Alert>
                       <Info className="h-4 w-4" />
                       <AlertTitle>Food Not in Database</AlertTitle>
                       <AlertDescription>We classified this food, but we don't have detailed ingredient or nutritional data for it in our database.</AlertDescription>
@@ -404,16 +491,68 @@ export function FoodScanner() {
               </Card>
             )}
 
+            {extractedText !== null && activeTab === 'scan-label' && (
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                      <CardTitle>Scan Results</CardTitle>
+                      {isOcrLoading && !ocrAllergenResult ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      ) : ocrAllergenResult && (
+                          <Badge 
+                            variant={ocrBadgeProps.variant}
+                            className={cn("text-base px-4 py-1 flex-shrink-0", ocrBadgeProps.className)}
+                          >
+                            {ocrBadgeProps.children}
+                          </Badge>
+                      )}
+                  </div>
+                   <CardDescription>Review the extracted text and allergen check.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {ocrAllergenResult && (
+                    <Alert variant={ocrBadgeProps.variant === 'destructive' ? 'destructive' : 'default'}>
+                      <Shield className="h-4 w-4" />
+                      <AlertTitle>{ocrAllergenResult.allergenDetected ? `Potential Allergen(s) Found!` : 'Looking Good!'}</AlertTitle>
+                      <AlertDescription>
+                        {ocrAllergenResult.allergenDetected ? 
+                          `We detected the following potential allergens based on your profile: ${ocrAllergenResult.detectedAllergens.join(', ')}.` :
+                          'We did not detect any of your specified allergens in this product.'
+                        }
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="space-y-2">
+                      <h4 className="font-semibold">Extracted Ingredients</h4>
+                      <Textarea readOnly value={extractedText} rows={8} className="text-sm bg-muted" />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={isLoading || !preview} className="w-full">
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analyzing...
-                </>
-              ) : "Analyze Food"}
-            </Button>
+            {activeTab === 'analyze-food' ? (
+                <Button type="submit" disabled={isClassifyLoading || !preview} className="w-full">
+                {isClassifyLoading ? (
+                    <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                    </>
+                ) : "Analyze Food"}
+                </Button>
+            ) : (
+                <Button type="button" onClick={handleScanLabel} disabled={isOcrLoading || !preview} className="w-full">
+                {isOcrLoading ? (
+                    <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Scanning...
+                    </>
+                ) : "Scan Product Label"}
+                </Button>
+            )}
+            
           </CardFooter>
         </form>
       </Form>
