@@ -62,7 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             backgroundPosition: 'center',
             backgroundAttachment: 'fixed',
         }}>
-            <div data-ai-hint="food ingredients spices" className="hidden"></div>
+            <div data-ai-hint="culinary herbs" className="hidden"></div>
             <header className="flex h-14 items-center gap-4 border-b bg-card/90 backdrop-blur-sm px-4 lg:hidden sticky top-0 z-40">
                 <Sheet>
                     <SheetTrigger asChild>
