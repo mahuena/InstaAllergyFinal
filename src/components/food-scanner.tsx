@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Camera, AlertTriangle, Info, Loader2, Shield, Sparkles, X } from "lucide-react";
+import { Camera, AlertTriangle, Info, Loader2, Shield, Sparkles, X, Upload, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { classifyFood, ClassifyFoodOutput } from "@/ai/flows/classify-food";
@@ -23,7 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "./ui/separator";
 
 const formSchema = z.object({
-  image: z.instanceof(File).refine(file => file.size > 0, "An image is required."),
+  image: z.instanceof(File, {message: "An image is required."}).refine(file => file.size > 0, "An image is required."),
 });
 
 type ClassificationResult = ClassifyFoodOutput & { foodDetails: FoodItem | null };
@@ -35,18 +35,60 @@ export function FoodScanner() {
   const [allergenResult, setAllergenResult] = useState<AllergenResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   const { toast } = useToast();
   const { allergens: userAllergens } = useUser();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      image: undefined
+    }
   });
+
+  useEffect(() => {
+    if (!isCameraOpen) return;
+
+    let stream: MediaStream;
+    const getCameraPermission = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setHasCameraPermission(true);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error("Error accessing camera:", error);
+        setHasCameraPermission(false);
+        toast({
+          variant: "destructive",
+          title: "Camera Access Denied",
+          description: "Please enable camera permissions in your browser settings to use this app.",
+        });
+      }
+    };
+
+    getCameraPermission();
+
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const mediaStream = videoRef.current.srcObject as MediaStream;
+        mediaStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [isCameraOpen, toast]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      form.setValue("image", file);
+      form.setValue("image", file, { shouldValidate: true });
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
@@ -56,6 +98,36 @@ export function FoodScanner() {
     }
   };
 
+  const handleCapture = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d");
+      
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUri = canvas.toDataURL("image/jpeg");
+        setPreview(dataUri);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+            form.setValue("image", file, { shouldValidate: true });
+            resetResults();
+          }
+        }, "image/jpeg", 0.95);
+      }
+      setIsCameraOpen(false);
+    }
+  };
+
+  const openCamera = () => {
+    resetState();
+    setIsCameraOpen(true);
+  };
+  
   const resetState = () => {
     form.reset();
     setPreview(null);
@@ -63,13 +135,13 @@ export function FoodScanner() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    setIsCameraOpen(false);
   }
 
   const resetResults = () => {
     setClassificationResult(null);
     setAllergenResult(null);
     setError(null);
-    setIsLoading(false);
   }
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
@@ -95,7 +167,6 @@ export function FoodScanner() {
           });
           setAllergenResult(daOutput);
         }
-
         setIsLoading(false);
       };
     } catch (e) {
@@ -125,12 +196,11 @@ export function FoodScanner() {
   
   const badgeProps = allergenResult ? getAlertBadgeProps(allergenResult.alert) : getAlertBadgeProps();
 
-
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Food Scanner</CardTitle>
-        <CardDescription>Upload a photo of your food to analyze it for allergens.</CardDescription>
+        <CardDescription>Upload a photo or use your camera to analyze it for allergens.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -141,20 +211,9 @@ export function FoodScanner() {
               render={() => (
                 <FormItem>
                   <FormControl>
-                    <div
-                      className="relative group flex justify-center items-center w-full h-64 border-2 border-dashed border-input rounded-lg cursor-pointer bg-card hover:border-primary transition-colors"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        disabled={isLoading}
-                      />
+                    <div className="w-full">
                       {preview ? (
-                        <>
+                        <div className="relative group w-full h-64">
                           <Image src={preview} alt="Food preview" layout="fill" objectFit="contain" className="rounded-lg p-2" />
                            <Button 
                             type="button" 
@@ -167,12 +226,58 @@ export function FoodScanner() {
                             <X className="h-4 w-4" />
                             <span className="sr-only">Clear image</span>
                            </Button>
-                        </>
+                        </div>
+                      ) : isCameraOpen ? (
+                        <div className="space-y-4">
+                          <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted border">
+                            <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                          </div>
+                          {hasCameraPermission === false && (
+                              <Alert variant="destructive">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertTitle>Camera Access Required</AlertTitle>
+                                <AlertDescription>
+                                  Please allow camera access to use this feature.
+                                </AlertDescription>
+                              </Alert>
+                          )}
+                          <div className="flex gap-2 justify-center">
+                            <Button type="button" variant="outline" onClick={() => setIsCameraOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="button" onClick={handleCapture} disabled={isLoading || hasCameraPermission !== true}>
+                                <Camera className="mr-2 h-4 w-4" />
+                                Capture Photo
+                            </Button>
+                          </div>
+                        </div>
                       ) : (
-                        <div className="text-center text-muted-foreground group-hover:text-primary transition-colors">
-                          <Camera className="mx-auto h-12 w-12 mb-2" />
-                          <p className="font-semibold">Click to upload image</p>
-                          <p className="text-sm">or drag and drop</p>
+                        <div
+                          className="relative group flex flex-col justify-center items-center w-full h-64 border-2 border-dashed border-input rounded-lg cursor-pointer bg-card hover:border-primary transition-colors"
+                          onClick={() => !isLoading && fileInputRef.current?.click()}
+                        >
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            disabled={isLoading}
+                          />
+                          <div className="text-center text-muted-foreground group-hover:text-primary transition-colors p-4">
+                            <Upload className="mx-auto h-12 w-12 mb-2" />
+                            <p className="font-semibold">Click to upload image</p>
+                            <p className="text-sm">or drag and drop</p>
+                            <div className="relative flex py-4 items-center">
+                                <div className="flex-grow border-t border-muted-foreground/20"></div>
+                                <span className="flex-shrink mx-4 text-muted-foreground/50 text-xs">OR</span>
+                                <div className="flex-grow border-t border-muted-foreground/20"></div>
+                            </div>
+                            <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); openCamera(); }} disabled={isLoading}>
+                                <Video className="mr-2 h-4 w-4" />
+                                Use Camera
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -181,7 +286,7 @@ export function FoodScanner() {
               )}
             />
             
-            {isLoading && (
+            {isLoading && !classificationResult &&(
               <div className="flex items-center justify-center space-x-2">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 <p className="text-muted-foreground">Analyzing your food...</p>
@@ -221,7 +326,9 @@ export function FoodScanner() {
                                       <span>{Math.round(classificationResult.confidence * 100)}%</span>
                                   </div>
                               </div>
-                              {allergenResult && (
+                              {isLoading ? (
+                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                              ) : allergenResult && (
                                   <Badge 
                                     variant={badgeProps.variant}
                                     className={cn("text-base px-4 py-1 flex-shrink-0", badgeProps.className)}
@@ -234,7 +341,12 @@ export function FoodScanner() {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {allergenResult && (
+                  {(isLoading && !allergenResult) ? (
+                     <div className="flex items-center justify-center space-x-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <p className="text-muted-foreground">Checking for allergens...</p>
+                    </div>
+                  ) : allergenResult && (
                     <Alert variant={badgeProps.variant === 'destructive' ? 'destructive' : 'default'}>
                       <Shield className="h-4 w-4" />
                       <AlertTitle>{allergenResult.allergenDetected ? `Potential Allergen(s) Found!` : 'Looking Good!'}</AlertTitle>
@@ -267,7 +379,7 @@ export function FoodScanner() {
                         </div>
                     </div>
                   ) : (
-                    <Alert>
+                    !isLoading && <Alert>
                       <Info className="h-4 w-4" />
                       <AlertTitle>Food Not in Database</AlertTitle>
                       <AlertDescription>We classified this food, but we don't have detailed ingredient or nutritional data for it in our database.</AlertDescription>
@@ -305,6 +417,7 @@ export function FoodScanner() {
           </CardFooter>
         </form>
       </Form>
+      <canvas ref={canvasRef} className="hidden" />
     </Card>
   );
 }
