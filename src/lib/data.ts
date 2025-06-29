@@ -9,7 +9,8 @@ export const COMMON_ALLERGENS = [
   "Shellfish",
   "Sesame",
   "Corn",
-  "Chocolate",
+  "Snails",
+  "Agushi (Melon Seeds)",
 ];
 
 export type FoodItem = {
