@@ -1,35 +1,46 @@
-# AllergySafe
+# AllergySafe: Your Personal Food Allergen Detector
 
-This is a Next.js application built with Firebase Studio to help users identify potential allergens in food.
+This file is the instruction manual for setting up and running the AllergySafe app on your own computer.
 
-## Getting Started Locally
+## How to Run This App Locally
 
-If you have downloaded or cloned this project to your local machine, follow these steps to get it running.
+Follow these three simple steps to get the app working.
 
-### 1. Set Up Your API Key
+### Step 1: Provide Your Secret AI Key
 
-The AI features in this app are powered by Google Gemini. To enable them, you need to provide an API key.
+The app uses Google's AI (called Gemini) to recognize food from pictures. To use this feature, you need a special "key," which is free to get.
 
-1.  Obtain a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-2.  Create a file named `.env` in the project root (if it doesn't exist).
-3.  Add the following line to your `.env` file, replacing the placeholder with your actual key:
+1.  **Get your key:** Go to [Google AI Studio](https://aistudio.google.com/app/apikey) and click to get your free API key.
+2.  **Create a secret file:** In the main folder of this project, create a new file and name it exactly `.env`.
+3.  **Add your key to the file:** Open that new `.env` file and add the following line. Be sure to paste your own key where it says `YOUR_API_KEY_HERE`:
 
-`GOOGLE_API_KEY="YOUR_API_KEY_HERE"`
+    `GOOGLE_API_KEY="YOUR_API_KEY_HERE"`
 
-### 2. Install Dependencies
+    This `.env` file is special because it keeps your key safe and private.
 
-Navigate to the project's root directory in your terminal and run the following command to install all the required packages:
+### Step 2: Install the App's Building Blocks
 
-```bash
-npm install
-```
+This app is made of many different code packages. You can install all of them with a single command.
 
-### 3. Run the Development Server
+1.  Open your computer's terminal (like Command Prompt, PowerShell, or the Terminal app on a Mac).
+2.  Navigate into this project's main folder.
+3.  Run this command:
 
-Once the installation is complete, you can start the app:
+    ```bash
+    npm install
+    ```
+    This might take a minute or two to download everything it needs.
 
-```bash
-npm run dev
-```
+### Step 3: Start the App!
 
-Now, open [http://localhost:9002](http://localhost:9002) in your browser to see the application.
+Now you're ready to see the app in action.
+
+1.  In the same terminal, run this command:
+
+    ```bash
+    npm run dev
+    ```
+
+2.  Open your favorite web browser and go to this address: [http://localhost:9002](http://localhost:9002)
+
+You should now see the AllergySafe app running right on your computer!
