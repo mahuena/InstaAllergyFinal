@@ -8,6 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import {googleAI} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 
 const GenerateFoodImageInputSchema = z.object({
@@ -34,7 +35,7 @@ const generateFoodImageFlow = ai.defineFlow(
   },
   async ({ foodName }) => {
     const { media } = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-preview-image-generation',
+      model: googleAI.model('gemini-2.0-flash-preview-image-generation'),
       prompt: `A high-quality, appetizing, vibrant, professional photograph of ${foodName}.`,
       config: {
         responseModalities: ['IMAGE', 'TEXT'],
