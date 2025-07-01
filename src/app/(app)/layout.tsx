@@ -29,7 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <SidebarHeader>
         <div className="flex items-center gap-2">
           <Icons.logo className="h-8 w-8 text-primary" />
-          <h1 className="text-xl font-bold">instaAllergy</h1>
+          <h1 className="text-xl font-bold">AllergySafe</h1>
         </div>
       </SidebarHeader>
       <SidebarContent className="p-0">
@@ -78,7 +78,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Sheet>
                  <div className="flex items-center gap-2">
                     <Icons.logo className="h-7 w-7 text-primary" />
-                    <h1 className="text-lg font-bold">instaAllergy</h1>
+                    <h1 className="text-lg font-bold">AllergySafe</h1>
                 </div>
             </header>
             <div className="flex-1 overflow-y-auto bg-background/90 backdrop-blur-sm">

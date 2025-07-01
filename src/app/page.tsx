@@ -58,7 +58,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Welcome Back!</CardTitle>
           <CardDescription>
-            Sign in to continue to instaAllergy
+            Sign in to continue to AllergySafe
           </CardDescription>
         </CardHeader>
         <CardContent>
