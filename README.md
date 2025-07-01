@@ -1,6 +1,6 @@
-# AllergySafe: Your Personal Food Allergen Detector
+# InstaAllergy: Your Personal Food Allergen Detector
 
-This file is the instruction manual for setting up and running the AllergySafe app on your own computer.
+This file is the instruction manual for setting up and running the InstaAllergy app on your own computer.
 
 ## How to Run This App Locally
 
@@ -43,4 +43,4 @@ Now you're ready to see the app in action.
 
 2.  Open your favorite web browser and go to this address: [http://localhost:9002](http://localhost:9002)
 
-You should now see the AllergySafe app running right on your computer!
+You should now see the InstaAllergy app running right on your computer!

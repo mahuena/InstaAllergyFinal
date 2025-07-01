@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AllergySafe",
+  title: "InstaAllergy",
   description: "Identify allergens in your food instantly.",
 };
 

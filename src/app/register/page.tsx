@@ -62,7 +62,7 @@ export default function RegisterPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
           <CardDescription>
-            Join AllergySafe and eat with confidence.
+            Join InstaAllergy and eat with confidence.
           </CardDescription>
         </CardHeader>
         <CardContent>
