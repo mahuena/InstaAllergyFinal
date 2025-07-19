@@ -18,7 +18,7 @@ export default function DashboardPage() {
         </h1>
         <p className="text-muted-foreground">
           {allergens.length > 0
-            ? "Scan a food item to check for allergens and view details."
+            ? "Upload a food item to check for allergens and view details."
             : "Get started by setting up your allergy profile."}
         </p>
       </div>
