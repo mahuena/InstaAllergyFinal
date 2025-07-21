@@ -44,6 +44,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [registeredUsers]);
 
+    const logout = useCallback(() => {
+        setUser(null);
+        setIsAuthenticated(false);
+        setAllergens(COMMON_ALLERGENS.slice(0, 3)); // Optionally reset allergens
+    }, []);
+
   const updateAllergens = useCallback((newAllergens: string[]) => {
     setAllergens(newAllergens);
   }, []);
