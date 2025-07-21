@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'instaAllergy',
   webDir: 'out',
   server: {
-    url: 'https://insta-allergy-final.vercel.app/',
+    url: 'https://insta-allergy-final.vercel.app',
     cleartext: true
   },
   plugins: {
