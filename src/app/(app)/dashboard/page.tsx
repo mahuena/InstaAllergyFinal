@@ -14,7 +14,7 @@ export default function DashboardPage() {
     <div className="container mx-auto p-4 md:p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">
-          Welcome, {user?.name || "User"}!
+          Welcome, {"User"}!
         </h1>
         <p className="text-muted-foreground">
           {allergens.length > 0

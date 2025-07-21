@@ -24,16 +24,25 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [allergens, setAllergens] = useState<string[]>(COMMON_ALLERGENS.slice(0, 3)); // Default with a few allergies
+    const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
 
-  const login = useCallback((email: string, name: string) => {
-    setUser({ email, name });
-    setIsAuthenticated(true);
-  }, []);
+// Registration function (call this when registering a new user)
+    const register = useCallback((email: string, name: string) => {
+        setRegisteredUsers(prev => [...prev, { email, name }]);
+    }, []);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    setIsAuthenticated(false);
-  }, []);
+// Update login to check if user exists
+    const login = useCallback((email: string, name: string) => {
+        const userExists = registeredUsers.some(user => user.email === email);
+        if (userExists) {
+            setUser({ email, name });
+            setIsAuthenticated(true);
+        } else {
+            setUser(null);
+            setIsAuthenticated(false);
+            // Optionally, show an error message
+        }
+    }, [registeredUsers]);
 
   const updateAllergens = useCallback((newAllergens: string[]) => {
     setAllergens(newAllergens);
